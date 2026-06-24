@@ -1,0 +1,516 @@
+<!-- Scripts.html — incluido desde Index.html con <?!= include('Scripts'); ?> -->
+<script>
+/* ===========================================================================
+ *  Lógica del cliente (sandbox IFRAME de HtmlService).
+ *  Comunicación con el backend vía google.script.run.
+ * =========================================================================== */
+
+var RB = {                 // namespace del cliente (evita globals sueltos)
+  config: null,            // { empresa, logo, firma } desde el servidor
+  facturaActual: null,     // datos crudos de la última factura buscada
+  fpContador: 0            // ids de filas de forma de pago
+};
+
+/* ---------------------- Utilidades de formato ------------------------------ */
+
+function rbNum(v) {
+  if (v === null || v === undefined || v === "") return 0;
+  if (typeof v === "number") return v;
+  var s = String(v).trim().replace(/[^0-9,.\-]/g, "");
+  if (s === "" || s === "-") return 0;
+  var coma = s.indexOf(",") > -1, punto = s.indexOf(".") > -1;
+  if (coma && punto) s = s.replace(/\./g, "").replace(",", ".");
+  else if (coma) s = s.replace(",", ".");
+  var n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+// Formato argentino: $4.582.830,00
+function rbMoneda(n) {
+  n = rbNum(n);
+  return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* ----------- Número en letras (port cliente de numeroALetras) --------------
+ * Se duplica acá para recalcular "Son:" en vivo sin ir al servidor.
+ * Mantener sincronizado con la función numeroALetras de Codigo.gs.
+ * --------------------------------------------------------------------------- */
+var RB_UNI = ["cero","uno","dos","tres","cuatro","cinco","seis","siete","ocho","nueve",
+  "diez","once","doce","trece","catorce","quince","dieciséis","diecisiete","dieciocho",
+  "diecinueve","veinte","veintiuno","veintidós","veintitrés","veinticuatro","veinticinco",
+  "veintiséis","veintisiete","veintiocho","veintinueve"];
+var RB_DEC = ["","","veinte","treinta","cuarenta","cincuenta","sesenta","setenta","ochenta","noventa"];
+var RB_CEN = ["","ciento","doscientos","trescientos","cuatrocientos","quinientos",
+  "seiscientos","setecientos","ochocientos","novecientos"];
+
+function rbApocopar(t) {
+  if (/veintiuno$/.test(t)) return t.replace(/veintiuno$/, "veintiún");
+  if (/uno$/.test(t)) return t.replace(/uno$/, "un");
+  return t;
+}
+function rbDecenas(n) {
+  if (n < 30) return RB_UNI[n];
+  var d = Math.floor(n / 10), u = n % 10, out = RB_DEC[d];
+  if (u > 0) out += " y " + RB_UNI[u];
+  return out;
+}
+function rbCentenas(n) {
+  if (n === 0) return "";
+  if (n === 100) return "cien";
+  var c = Math.floor(n / 100), r = n % 100, out = "";
+  if (c > 0) out += RB_CEN[c];
+  if (r > 0) out += (out ? " " : "") + rbDecenas(r);
+  return out;
+}
+function rbMiles(n) {
+  var miles = Math.floor(n / 1000), r = n % 1000, out = "";
+  if (miles > 0) out += (miles === 1) ? "mil" : rbApocopar(rbCentenas(miles)) + " mil";
+  if (r > 0) out += (out ? " " : "") + rbCentenas(r);
+  return out;
+}
+function rbEntero(n) {
+  if (n === 0) return "cero";
+  var mill = Math.floor(n / 1000000), r = n % 1000000, out = "";
+  if (mill > 0) out += (mill === 1) ? "un millón" : rbApocopar(rbMiles(mill)) + " millones";
+  if (r > 0) out += (out ? " " : "") + rbMiles(r);
+  return out;
+}
+function rbNumeroALetras(monto) {
+  var num = rbNum(monto), neg = num < 0;
+  num = Math.abs(num);
+  var ent = Math.floor(num), cent = Math.round((num - ent) * 100);
+  if (cent === 100) { ent += 1; cent = 0; }
+  // Apócope ante el sustantivo: "un peso", "veintiún pesos", "ciento un pesos".
+  var letras = rbApocopar(rbEntero(ent));
+  letras = letras.charAt(0).toUpperCase() + letras.slice(1);
+  var res = (neg ? "Menos " : "") + letras + " pesos";
+  if (cent > 0) res += " con " + (cent < 10 ? "0" + cent : cent) + "/100";
+  return res;
+}
+
+/* ----------------------------- Helpers DOM --------------------------------- */
+function $(id) { return document.getElementById(id); }
+function val(id) { var e = $(id); return e ? e.value : ""; }
+function setTxt(id, t) { var e = $(id); if (e) e.textContent = t; }
+
+function mostrarMsg(id, texto, tipo) {
+  var e = $(id);
+  if (!e) return;
+  if (!texto) { e.className = "msg"; e.innerHTML = ""; return; }
+  e.className = "msg show msg-" + (tipo || "aviso");
+  e.innerHTML = texto;
+}
+
+/* ===========================================================================
+ *  INICIALIZACIÓN
+ * =========================================================================== */
+document.addEventListener("DOMContentLoaded", function () {
+  // Config (empresa/logo/firma)
+  google.script.run
+    .withSuccessHandler(rbAplicarConfig)
+    .withFailureHandler(function (err) {
+      mostrarMsg("msgBusqueda", "No se pudo cargar la configuración: " + err.message, "error");
+    })
+    .recibo_obtenerConfigCliente();
+
+  // Lista de facturas para el desplegable
+  google.script.run
+    .withSuccessHandler(rbPoblarFacturas)
+    .withFailureHandler(function (err) {
+      var sel = $("selFactura");
+      sel.innerHTML = '<option value="">(no se pudo cargar la lista)</option>';
+    })
+    .recibo_listarFacturas();
+
+  // Listeners
+  $("btnBuscar").addEventListener("click", rbBuscar);
+  $("inNroFactura").addEventListener("keydown", function (e) { if (e.key === "Enter") rbBuscar(); });
+  $("selFactura").addEventListener("change", function () {
+    if (this.value) { $("inNroFactura").value = this.value; rbBuscar(); }
+  });
+  $("btnAgregarFp").addEventListener("click", function () { rbAgregarFilaFp(); });
+  $("btnGenerar").addEventListener("click", rbGenerarClienteHtml2pdf);
+  $("btnGenerarServidor").addEventListener("click", rbGenerarServidor);
+
+  // Recalcular ante cualquier edición
+  document.addEventListener("input", function (e) {
+    if (e.target && (e.target.classList.contains("recalc") ||
+        e.target.classList.contains("fp-input") || e.target.classList.contains("dato"))) {
+      rbRecalcular();
+    }
+  });
+});
+
+function rbAplicarConfig(cfg) {
+  RB.config = cfg || {};
+  var emp = RB.config.empresa || {};
+
+  $("empresaSubtitulo").textContent = emp.razonSocial || "Surcherie";
+
+  // Encabezado del recibo (empresa)
+  $("recEmpresa").innerHTML =
+    '<div class="razon">' + rbEsc(emp.razonSocial) + '</div>' +
+    rbLinea(emp.direccion) +
+    rbLinea("Tel: " + (emp.tel || "")) +
+    rbLinea(emp.email) +
+    rbLinea(emp.condicionIVA) +
+    rbLinea("CUIT: " + (emp.cuit || "")) +
+    rbLinea("IIBB: " + (emp.iibb || "")) +
+    rbLinea("Der. Reg. e Insp.: " + (emp.derRegInsp || "")) +
+    rbLinea("Inicio de actividades: " + (emp.inicioActividades || ""));
+
+  $("recFirmaPie").textContent = emp.razonSocial || "";
+
+  // Logo
+  if (RB.config.logo && RB.config.logo.indexOf("data:") === 0) {
+    $("recLogoCont").innerHTML = '<img class="rec-logo" src="' + RB.config.logo + '" alt="Logo">';
+  }
+  // Firma
+  if (RB.config.firma && RB.config.firma.indexOf("data:") === 0) {
+    $("recFirmaCont").innerHTML = '<img src="' + RB.config.firma + '" alt="Firma">';
+  }
+}
+
+function rbLinea(t) { return t ? "<div>" + rbEsc(t) + "</div>" : ""; }
+function rbEsc(t) {
+  return String(t == null ? "" : t)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function rbPoblarFacturas(lista) {
+  var sel = $("selFactura");
+  if (!lista || !lista.length) {
+    sel.innerHTML = '<option value="">(sin facturas en la hoja)</option>';
+    return;
+  }
+  var html = '<option value="">— Elegir factura —</option>';
+  lista.forEach(function (f) {
+    var etiqueta = f.nroFactura + (f.paciente ? "  ·  " + f.paciente : "");
+    html += '<option value="' + rbEsc(f.nroFactura) + '">' + rbEsc(etiqueta) + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
+/* ===========================================================================
+ *  BUSCAR FACTURA
+ * =========================================================================== */
+function rbBuscar() {
+  var nro = val("inNroFactura").trim();
+  if (!nro) { mostrarMsg("msgBusqueda", "Ingresá un número de factura.", "error"); return; }
+
+  var btn = $("btnBuscar");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Buscando…';
+  mostrarMsg("msgBusqueda", "", "");
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      btn.disabled = false; btn.textContent = "Buscar";
+      rbAplicarBusqueda(res);
+    })
+    .withFailureHandler(function (err) {
+      btn.disabled = false; btn.textContent = "Buscar";
+      mostrarMsg("msgBusqueda", "Error: " + err.message, "error");
+    })
+    .recibo_buscarFactura(nro);
+}
+
+function rbAplicarBusqueda(res) {
+  if (!res || !res.encontrada) {
+    mostrarMsg("msgBusqueda", (res && res.mensaje) || "Factura no encontrada.", "error");
+    return;
+  }
+  RB.facturaActual = res;
+  mostrarMsg("msgBusqueda", "Factura encontrada. Revisá y editá los datos antes de generar.", "ok");
+  $("bloqueDatos").classList.remove("oculto");
+
+  var f = res.financiero;
+  $("inPaciente").value = f.paciente || "";
+  $("inObraSocial").value = f.obraSocial || "";
+  $("inFecha").value = f.fecha || "";
+  $("inImporte").value = f.importe || 0;
+  $("inIG").value = f.retIG || 0;
+  $("inIIBB").value = f.retIIBB || 0;
+  $("inSellos").value = "";   // siempre manual
+  $("inOtros").value = "";    // siempre manual
+
+  if (res.clienteEncontrado && res.cliente) {
+    var c = res.cliente;
+    $("inCliente").value = c.cliente || f.obraSocial || "";
+    $("inDireccion").value = c.direccion || "";
+    $("inLocalidad").value = c.localidad || "";
+    $("inCuit").value = c.cuit || "";
+    $("inIva").value = c.iva || "";
+    mostrarMsg("msgCliente", "", "");
+  } else {
+    $("inCliente").value = f.obraSocial || "";
+    $("inDireccion").value = "";
+    $("inLocalidad").value = "";
+    $("inCuit").value = "";
+    $("inIva").value = "";
+    mostrarMsg("msgCliente", res.mensajeCliente || "Cargá los datos del cliente manualmente.", "aviso");
+  }
+
+  // Una fila de forma de pago por defecto (con el total sugerido luego del cálculo).
+  $("fpFilas").innerHTML = "";
+  RB.fpContador = 0;
+  rbAgregarFilaFp();
+
+  // Marcar inputs de datos como "dato" para que disparen recálculo de la vista.
+  ["inPaciente","inObraSocial","inFecha","inCliente","inDireccion","inLocalidad","inCuit","inIva"]
+    .forEach(function (id) { $(id).classList.add("dato"); });
+
+  rbRecalcular();
+}
+
+/* ===========================================================================
+ *  FORMA DE PAGO (filas dinámicas)
+ * =========================================================================== */
+function rbAgregarFilaFp(pre) {
+  pre = pre || {};
+  var id = ++RB.fpContador;
+  var div = document.createElement("div");
+  div.className = "fp-fila";
+  div.id = "fp-" + id;
+  div.innerHTML =
+    '<input type="text" class="fp-input fp-fecha" placeholder="dd/mm/aaaa" value="' + rbEsc(pre.fecha || "") + '">' +
+    '<input type="text" class="fp-input fp-forma" placeholder="ECHEQ N° 00002299" value="' + rbEsc(pre.forma || "") + '">' +
+    '<input type="text" class="fp-input fp-banco" placeholder="Banco" value="' + rbEsc(pre.banco || "") + '">' +
+    '<input type="number" step="0.01" class="fp-input fp-importe" placeholder="0,00" value="' + (pre.importe != null ? pre.importe : "") + '">' +
+    '<button type="button" class="fp-quitar" title="Quitar fila">✕</button>';
+  div.querySelector(".fp-quitar").addEventListener("click", function () {
+    div.parentNode.removeChild(div);
+    rbRecalcular();
+  });
+  $("fpFilas").appendChild(div);
+  rbRecalcular();
+}
+
+function rbLeerFormaPago() {
+  var filas = [];
+  var nodos = document.querySelectorAll("#fpFilas .fp-fila");
+  for (var i = 0; i < nodos.length; i++) {
+    var n = nodos[i];
+    filas.push({
+      fecha: n.querySelector(".fp-fecha").value.trim(),
+      forma: n.querySelector(".fp-forma").value.trim(),
+      banco: n.querySelector(".fp-banco").value.trim(),
+      importe: rbNum(n.querySelector(".fp-importe").value)
+    });
+  }
+  return filas;
+}
+
+/* ===========================================================================
+ *  CÁLCULOS EN VIVO + RENDER DE LA VISTA PREVIA
+ * =========================================================================== */
+function rbRecalcular() {
+  var importe = rbNum(val("inImporte"));
+  var ig = rbNum(val("inIG"));
+  var iibb = rbNum(val("inIIBB"));
+  var sellos = rbNum(val("inSellos"));
+  var otros = rbNum(val("inOtros"));
+
+  var descuento = ig + iibb + sellos + otros;
+  var total = importe - descuento;
+
+  // Resumen del panel
+  setTxt("resSubtotal", rbMoneda(importe));
+  setTxt("resDescuento", rbMoneda(descuento));
+  setTxt("resTotal", rbMoneda(total));
+  setTxt("resSon", "Son: " + rbNumeroALetras(total));
+
+  // Validación contra el Neto de financiero (avisar, no bloquear)
+  var neto = RB.facturaActual && RB.facturaActual.financiero ? rbNum(RB.facturaActual.financiero.neto) : null;
+  if (neto !== null && neto !== 0 && Math.abs(total - neto) > 0.01) {
+    mostrarMsg("msgNeto",
+      "⚠ El total calculado (" + rbMoneda(total) + ") no coincide con el Neto de la hoja financiero (" +
+      rbMoneda(neto) + "). Revisá las retenciones.", "aviso");
+  } else {
+    mostrarMsg("msgNeto", "", "");
+  }
+
+  // ----- Vista previa del recibo -----
+  setTxt("recFecha", val("inFecha") || "—");
+  setTxt("recFactura", (RB.facturaActual && RB.facturaActual.financiero.nroFactura) || val("inNroFactura") || "—");
+  setTxt("recImporte", rbMoneda(importe));
+  setTxt("recPaciente", val("inPaciente") || "—");
+  setTxt("recObraSocial", val("inObraSocial") || "—");
+
+  setTxt("recIG", rbMoneda(ig));
+  setTxt("recIIBB", rbMoneda(iibb));
+  setTxt("recSellos", rbMoneda(sellos));
+  setTxt("recOtros", rbMoneda(otros));
+
+  setTxt("recCliente", val("inCliente") || "—");
+  setTxt("recDireccion", val("inDireccion") || "—");
+  setTxt("recLocalidad", val("inLocalidad") || "—");
+  setTxt("recCuit", val("inCuit") || "—");
+  setTxt("recIva", val("inIva") || "—");
+
+  setTxt("recSubtotal", rbMoneda(importe));
+  setTxt("recDescuento", rbMoneda(descuento));
+  setTxt("recTotal", rbMoneda(total));
+  setTxt("recSon", rbNumeroALetras(total));
+
+  // Tabla forma de pago
+  var fp = rbLeerFormaPago();
+  var body = $("recFpBody");
+  if (!fp.length) {
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#aab4bf;">—</td></tr>';
+  } else {
+    body.innerHTML = fp.map(function (r) {
+      return "<tr><td>" + rbEsc(r.fecha || "—") + "</td><td>" + rbEsc(r.forma || "—") +
+        "</td><td>" + rbEsc(r.banco || "—") + "</td><td class='num'>" + rbMoneda(r.importe) + "</td></tr>";
+    }).join("");
+  }
+
+  return { importe: importe, descuento: descuento, total: total };
+}
+
+/* ===========================================================================
+ *  GENERAR PDF
+ * =========================================================================== */
+function rbDatosRegistro() {
+  var c = rbRecalcular();
+  return {
+    nroFactura: (RB.facturaActual && RB.facturaActual.financiero.nroFactura) || val("inNroFactura"),
+    cliente: val("inCliente") || val("inObraSocial"),
+    importe: c.importe,
+    descuento: c.descuento,
+    total: c.total
+  };
+}
+
+function rbNombreArchivo() {
+  var nro = ((RB.facturaActual && RB.facturaActual.financiero.nroFactura) || val("inNroFactura") || "SN")
+    .replace(/[\\/:*?"<>|]/g, "_");
+  var cli = (val("inCliente") || "Cliente").replace(/[\\/:*?"<>|]/g, "_");
+  return "Recibo_" + nro + "_" + cli;
+}
+
+// --- Opción principal: html2pdf.js en el cliente ---
+function rbGenerarClienteHtml2pdf() {
+  if (typeof html2pdf === "undefined") {
+    mostrarMsg("msgGenerar", "No se pudo cargar html2pdf.js (CDN). Probá «PDF (modo servidor)».", "error");
+    return;
+  }
+  rbBloquearGenerar(true, "Registrando recibo…");
+
+  // 1) Registrar en la hoja recibos para obtener el N° correlativo.
+  google.script.run
+    .withSuccessHandler(function (reg) {
+      setTxt("recNro", reg.nroRecibo);                 // 2) poner el N° en la vista
+      mostrarMsg("msgGenerar",
+        "Recibo N° " + reg.nroRecibo + " registrado. Generando PDF…", "ok");
+
+      // 3) Exportar el div #recibo a PDF.
+      var opt = {
+        margin: 0,
+        filename: rbNombreArchivo() + ".pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      };
+      html2pdf().set(opt).from($("recibo")).save()
+        .then(function () {
+          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroRecibo + " generado y descargado.", "ok");
+          rbBloquearGenerar(false);
+        })
+        .catch(function (e) {
+          mostrarMsg("msgGenerar", "Error al generar el PDF en el cliente: " + e + ". Probá «PDF (modo servidor)».", "error");
+          rbBloquearGenerar(false);
+        });
+    })
+    .withFailureHandler(function (err) {
+      mostrarMsg("msgGenerar", "No se pudo registrar el recibo: " + err.message, "error");
+      rbBloquearGenerar(false);
+    })
+    .recibo_registrar(rbDatosRegistro());
+}
+
+// --- Fallback: PDF armado en el servidor ---
+function rbGenerarServidor() {
+  rbBloquearGenerar(true, "Registrando recibo…");
+
+  google.script.run
+    .withSuccessHandler(function (reg) {
+      setTxt("recNro", reg.nroRecibo);
+      mostrarMsg("msgGenerar", "Recibo N° " + reg.nroRecibo + " registrado. Generando PDF en el servidor…", "ok");
+
+      // Armar HTML autocontenido (estilos inline mínimos) a partir de la vista.
+      var html = rbHtmlReciboServidor();
+      google.script.run
+        .withSuccessHandler(function (pdf) {
+          rbDescargarBase64(pdf.base64, pdf.nombre, pdf.tipo);
+          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroRecibo + " generado (modo servidor).", "ok");
+          rbBloquearGenerar(false);
+        })
+        .withFailureHandler(function (err) {
+          mostrarMsg("msgGenerar", "Error al generar el PDF en el servidor: " + err.message, "error");
+          rbBloquearGenerar(false);
+        })
+        .recibo_generarPdfServidor(html, rbNombreArchivo());
+    })
+    .withFailureHandler(function (err) {
+      mostrarMsg("msgGenerar", "No se pudo registrar el recibo: " + err.message, "error");
+      rbBloquearGenerar(false);
+    })
+    .recibo_registrar(rbDatosRegistro());
+}
+
+// HTML del recibo con estilos inline, para el conversor del servidor.
+function rbHtmlReciboServidor() {
+  var nodo = $("recibo").cloneNode(true);
+  var css =
+    "body{font-family:Arial,Helvetica,sans-serif;color:#1c2733;font-size:12px;margin:0;padding:16px;}" +
+    "#recibo{width:100%;}" +
+    ".rec-header{display:flex;justify-content:space-between;border-bottom:2px solid #1f4e79;padding-bottom:10px;margin-bottom:14px;}" +
+    ".rec-logo{max-height:90px;max-width:230px;}" +
+    ".rec-logo-placeholder{display:none;}" +
+    ".rec-empresa{text-align:right;font-size:11px;line-height:1.5;}" +
+    ".rec-empresa .razon{font-size:15px;font-weight:700;color:#1f4e79;}" +
+    ".rec-titulo{display:flex;justify-content:space-between;margin:6px 0 14px;}" +
+    ".rec-titulo .t{font-size:22px;font-weight:700;letter-spacing:.08em;color:#1f4e79;}" +
+    ".rec-titulo .n{font-size:16px;font-weight:700;}" +
+    ".rec-bloque{margin-bottom:12px;}" +
+    ".rec-bloque .tit{font-size:11px;font-weight:700;text-transform:uppercase;color:#1f4e79;background:#eef2f6;padding:4px 8px;border-radius:4px;margin-bottom:6px;}" +
+    ".rec-campos{display:grid;gap:4px 18px;padding:0 4px;}" +
+    ".rec-campos.c3{grid-template-columns:repeat(3,1fr);}" +
+    ".rec-campos.c4{grid-template-columns:repeat(4,1fr);}" +
+    ".rec-campos .item .k{font-weight:700;color:#5a5a5a;}" +
+    "table.rec-tabla{width:100%;border-collapse:collapse;font-size:12px;}" +
+    "table.rec-tabla th,table.rec-tabla td{border:1px solid #d6dee6;padding:5px 8px;text-align:left;}" +
+    "table.rec-tabla th{background:#eef2f6;color:#1f4e79;}" +
+    "table.rec-tabla td.num,table.rec-tabla th.num{text-align:right;}" +
+    ".rec-total{margin-top:14px;display:flex;justify-content:flex-end;}" +
+    ".rec-total .caja{min-width:280px;border:1px solid #d6dee6;border-radius:6px;overflow:hidden;}" +
+    ".rec-total .fila{display:flex;justify-content:space-between;padding:5px 12px;}" +
+    ".rec-total .fila.total{background:#1f4e79;color:#fff;font-weight:700;}" +
+    ".rec-son{margin-top:10px;padding:8px 10px;background:#eef2f6;border-radius:4px;}" +
+    ".rec-son .k{font-weight:700;color:#1f4e79;}" +
+    ".rec-firma{margin-top:36px;display:flex;justify-content:flex-end;text-align:center;}" +
+    ".rec-firma .box{width:240px;}.rec-firma img{max-height:80px;max-width:220px;}" +
+    ".rec-firma .linea{border-top:1px solid #1c2733;margin-top:4px;padding-top:4px;font-size:11px;}";
+  return "<!DOCTYPE html><html><head><meta charset='utf-8'><style>" + css +
+    "</style></head><body>" + nodo.outerHTML + "</body></html>";
+}
+
+function rbDescargarBase64(base64, nombre, tipo) {
+  var binaria = atob(base64);
+  var bytes = new Uint8Array(binaria.length);
+  for (var i = 0; i < binaria.length; i++) bytes[i] = binaria.charCodeAt(i);
+  var blob = new Blob([bytes], { type: tipo || "application/pdf" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = nombre || "Recibo.pdf";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
+function rbBloquearGenerar(estado, texto) {
+  $("btnGenerar").disabled = estado;
+  $("btnGenerarServidor").disabled = estado;
+  if (estado && texto) mostrarMsg("msgGenerar", '<span class="spinner spinner-azul"></span>' + texto, "ok");
+}
+</script>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<!--
+  Index.html — UI del Generador de Recibos de Cobranza (Surcherie).
+  Se sirve con HtmlService.createTemplateFromFile('Index').evaluate().
+  Incluye los parciales Estilos.html y Scripts.html con el patrón include().
+
+  INTEGRACIÓN: si tu proyecto ya tiene un Index.html, renombrá este archivo
+  (p. ej. RecibosIndex.html) y actualizá la referencia en recibo_render_().
+-->
+<html lang="es">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Estilos'); ?>
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>Generador de Recibos de Cobranza</h1>
+    <p id="empresaSubtitulo">Surcherie Implantes Quirúrgicos</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ===================== PANEL DE CARGA / EDICIÓN ===================== -->
+    <section class="panel" id="panelForm">
+
+      <h2>Buscar factura</h2>
+      <div class="buscador">
+        <div class="campo">
+          <label for="inNroFactura">N° de factura</label>
+          <input type="text" id="inNroFactura" placeholder="Ej. 0001-00001234" autocomplete="off">
+        </div>
+        <button class="btn-primario" id="btnBuscar" type="button">Buscar</button>
+      </div>
+      <div class="campo" style="margin-top:10px;">
+        <label for="selFactura">…o elegí de la lista</label>
+        <select id="selFactura">
+          <option value="">Cargando facturas…</option>
+        </select>
+      </div>
+
+      <div id="msgBusqueda" class="msg"></div>
+
+      <!-- Campos editables (se muestran al traer una factura) -->
+      <div id="bloqueDatos" class="oculto">
+
+        <h2>Datos de la factura</h2>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="inPaciente">Paciente</label>
+            <input type="text" id="inPaciente">
+          </div>
+          <div class="campo">
+            <label for="inObraSocial">Obra Social</label>
+            <input type="text" id="inObraSocial">
+          </div>
+          <div class="campo">
+            <label for="inFecha">Fecha</label>
+            <input type="text" id="inFecha" placeholder="dd/mm/aaaa">
+          </div>
+          <div class="campo">
+            <label for="inImporte">Importe</label>
+            <input type="number" step="0.01" id="inImporte" class="recalc">
+          </div>
+        </div>
+
+        <h2>Retenciones</h2>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="inIG">IG (Imp. a las Ganancias)</label>
+            <input type="number" step="0.01" id="inIG" class="recalc">
+          </div>
+          <div class="campo">
+            <label for="inIIBB">IIBB (Ingresos Brutos)</label>
+            <input type="number" step="0.01" id="inIIBB" class="recalc">
+          </div>
+          <div class="campo">
+            <label for="inSellos">Sellos / Sellados (manual)</label>
+            <input type="number" step="0.01" id="inSellos" class="recalc" value="">
+          </div>
+          <div class="campo">
+            <label for="inOtros">Otros (manual)</label>
+            <input type="number" step="0.01" id="inOtros" class="recalc" value="">
+          </div>
+        </div>
+
+        <h2>Cliente (obra social)</h2>
+        <div id="msgCliente" class="msg"></div>
+        <div class="grid-2">
+          <div class="campo">
+            <label for="inCliente">Cliente</label>
+            <input type="text" id="inCliente">
+          </div>
+          <div class="campo">
+            <label for="inDireccion">Dirección</label>
+            <input type="text" id="inDireccion">
+          </div>
+          <div class="campo">
+            <label for="inLocalidad">Localidad</label>
+            <input type="text" id="inLocalidad">
+          </div>
+          <div class="campo">
+            <label for="inCuit">CUIT</label>
+            <input type="text" id="inCuit">
+          </div>
+          <div class="campo">
+            <label for="inIva">IVA</label>
+            <input type="text" id="inIva">
+          </div>
+        </div>
+
+        <h2>Forma de pago</h2>
+        <div class="fp-encabezado">
+          <span>Fecha de pago</span>
+          <span>Forma de pago</span>
+          <span>Banco</span>
+          <span>Importe</span>
+          <span></span>
+        </div>
+        <div id="fpFilas"><!-- filas dinámicas --></div>
+        <button class="btn-secundario btn-pequeno" id="btnAgregarFp" type="button">+ Agregar fila</button>
+
+        <!-- Resumen de cálculos en vivo -->
+        <div class="totales-resumen">
+          <div class="linea"><span>Subtotal (Importe)</span><span id="resSubtotal">$0,00</span></div>
+          <div class="linea"><span>Descuento (retenciones)</span><span id="resDescuento">$0,00</span></div>
+          <div class="linea total"><span>Total a cobrar</span><span id="resTotal">$0,00</span></div>
+          <div class="son-letras" id="resSon">Son: —</div>
+          <div id="msgNeto" class="msg msg-aviso" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="acciones">
+          <button class="btn-primario" id="btnGenerar" type="button">Generar y descargar PDF</button>
+          <button class="btn-secundario" id="btnGenerarServidor" type="button">PDF (modo servidor)</button>
+        </div>
+        <div id="msgGenerar" class="msg"></div>
+      </div>
+    </section>
+
+    <!-- ===================== VISTA PREVIA DEL RECIBO ===================== -->
+    <section class="panel recibo-wrap">
+      <h2>Vista previa del recibo</h2>
+
+      <!-- Este div es el que html2pdf.js exporta a PDF -->
+      <div id="recibo">
+
+        <div class="rec-header">
+          <div id="recLogoCont">
+            <div class="rec-logo-placeholder">Logo (completar CONFIG.LOGO_BASE64)</div>
+          </div>
+          <div class="rec-empresa" id="recEmpresa"><!-- se completa por JS --></div>
+        </div>
+
+        <div class="rec-titulo">
+          <span class="t">RECIBO</span>
+          <span class="n">N° <span id="recNro">—</span></span>
+        </div>
+
+        <div class="rec-bloque">
+          <div class="rec-campos c3">
+            <div class="item"><span class="k">Fecha:</span> <span id="recFecha">—</span></div>
+            <div class="item"><span class="k">Factura:</span> <span id="recFactura">—</span></div>
+            <div class="item"><span class="k">Importe:</span> <span id="recImporte">$0,00</span></div>
+          </div>
+          <div class="rec-campos c3" style="margin-top:4px;">
+            <div class="item"><span class="k">Paciente:</span> <span id="recPaciente">—</span></div>
+            <div class="item"><span class="k">Obra Social:</span> <span id="recObraSocial">—</span></div>
+            <div class="item"></div>
+          </div>
+        </div>
+
+        <div class="rec-bloque">
+          <div class="tit">Retenciones</div>
+          <div class="rec-campos c4">
+            <div class="item"><span class="k">IG:</span> <span id="recIG">$0,00</span></div>
+            <div class="item"><span class="k">IIBB:</span> <span id="recIIBB">$0,00</span></div>
+            <div class="item"><span class="k">Sellos:</span> <span id="recSellos">$0,00</span></div>
+            <div class="item"><span class="k">Otros:</span> <span id="recOtros">$0,00</span></div>
+          </div>
+        </div>
+
+        <div class="rec-bloque">
+          <div class="tit">Cliente</div>
+          <div class="rec-campos c3">
+            <div class="item"><span class="k">Cliente:</span> <span id="recCliente">—</span></div>
+            <div class="item"><span class="k">Dirección:</span> <span id="recDireccion">—</span></div>
+            <div class="item"><span class="k">Localidad:</span> <span id="recLocalidad">—</span></div>
+            <div class="item"><span class="k">CUIT:</span> <span id="recCuit">—</span></div>
+            <div class="item"><span class="k">IVA:</span> <span id="recIva">—</span></div>
+            <div class="item"></div>
+          </div>
+        </div>
+
+        <div class="rec-bloque">
+          <div class="tit">Forma de pago</div>
+          <table class="rec-tabla">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Forma de pago</th><th>Banco</th><th class="num">Importe</th>
+              </tr>
+            </thead>
+            <tbody id="recFpBody">
+              <tr><td colspan="4" style="text-align:center;color:#aab4bf;">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rec-total">
+          <div class="caja">
+            <div class="fila"><span>Subtotal</span><span id="recSubtotal">$0,00</span></div>
+            <div class="fila"><span>Descuento</span><span id="recDescuento">$0,00</span></div>
+            <div class="fila total"><span>TOTAL</span><span id="recTotal">$0,00</span></div>
+          </div>
+        </div>
+
+        <div class="rec-son">
+          <span class="k">Son:</span> <span id="recSon">—</span>
+        </div>
+
+        <div class="rec-firma">
+          <div class="box">
+            <div id="recFirmaCont"></div>
+            <div class="linea" id="recFirmaPie">Surcherie Implantes Quirúrgicos</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Generación de PDF (opción principal). El sandbox IFRAME de HtmlService
+       permite cargar scripts desde CDN. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <?!= include('Scripts'); ?>
+</body>
+</html>
