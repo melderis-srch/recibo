@@ -1,0 +1,10 @@
+# clasp — credenciales y vínculo al proyecto (no subir a git)
+.clasp.json
+.clasprc.json
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Sistema
+.DS_Store

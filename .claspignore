@@ -1,0 +1,8 @@
+# Solo subimos a Apps Script el código y el manifest.
+# clasp sube .gs/.js/.html + appsscript.json; el resto se ignora.
+**/**
+!Codigo.gs
+!Index.html
+!Estilos.html
+!Scripts.html
+!appsscript.json
