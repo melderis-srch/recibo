@@ -47,9 +47,10 @@ const CONFIG = {
     inicioActividades: "01/09/2025"
   },
 
-  SHEET_FINANCIERO_ID: "<<< COMPLETAR ID de la planilla financiero >>>",
+  SHEET_FINANCIERO_ID: "1Qy7ylSFMy8-zOCMuGS7B6JUQ8K2BisuDX1WFB5bO-9E",
   SHEET_FINANCIERO_NOMBRE: "financiero",
-  SHEET_CLIENTES_ID: "<<< COMPLETAR ID de la planilla de clientes >>>",
+  // Los datos de clientes están en la planilla de recibos, hoja "clientes".
+  SHEET_CLIENTES_ID: "1sl866gwCKjx7H5GhP9p6_p_zqJc30uLNLuaGeXR2wiw",
   SHEET_CLIENTES_NOMBRE: "clientes",
 
   // Encabezados esperados en la hoja financiero (ajustar al texto real de la
