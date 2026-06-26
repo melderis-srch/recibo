@@ -147,15 +147,20 @@ function rbAplicarConfig(cfg) {
 
   $("empresaSubtitulo").textContent = emp.razonSocial || "Surcherie";
 
-  // Encabezado del recibo (empresa)
-  $("recEmpresa").innerHTML =
-    '<div class="razon">' + rbEsc(emp.razonSocial) + '</div>' +
+  // Subtítulo bajo el logo
+  setTxt("recSubtitulo", emp.subtitulo || emp.razonSocial || " ");
+
+  // Caja de datos (izquierda): dirección, tel, email, condición IVA
+  $("recDatosBox").innerHTML =
     rbLinea(emp.direccion) +
     rbLinea("Tel: " + (emp.tel || "")) +
-    rbLinea(emp.email) +
-    rbLinea(emp.condicionIVA) +
+    rbLinea("Email: " + (emp.email || "")) +
+    rbLinea(emp.condicionIVA);
+
+  // Datos fiscales (derecha)
+  $("recFiscal").innerHTML =
     rbLinea("CUIT: " + (emp.cuit || "")) +
-    rbLinea("IIBB: " + (emp.iibb || "")) +
+    rbLinea("Ing. Brutos " + (emp.iibb || "")) +
     rbLinea("Der. Reg. e Insp.: " + (emp.derRegInsp || "")) +
     rbLinea("Inicio de actividades: " + (emp.inicioActividades || ""));
 
@@ -358,6 +363,11 @@ function rbRecalcular() {
 
   setTxt("recFirmadoPor", val("inFirmadoPor") || " ");
 
+  // Observaciones (se oculta el bloque si está vacío)
+  var obs = val("inObservaciones");
+  setTxt("recObservaciones", obs);
+  $("recObsBloque").style.display = (obs && obs.trim()) ? "" : "none";
+
   // Tabla forma de pago
   var fp = rbLeerFormaPago();
   var body = $("recFpBody");
@@ -405,9 +415,9 @@ function rbGenerarClienteHtml2pdf() {
   // 1) Registrar en la hoja recibos para obtener el N° correlativo.
   google.script.run
     .withSuccessHandler(function (reg) {
-      setTxt("recNro", reg.nroRecibo);                 // 2) poner el N° en la vista
+      setTxt("recNro", reg.nroFormateado);                 // 2) poner el N° en la vista
       mostrarMsg("msgGenerar",
-        "Recibo N° " + reg.nroRecibo + " registrado. Generando PDF…", "ok");
+        "Recibo N° " + reg.nroFormateado + " registrado. Generando PDF…", "ok");
 
       // 3) Exportar el div #recibo a PDF.
       var opt = {
@@ -419,7 +429,7 @@ function rbGenerarClienteHtml2pdf() {
       };
       html2pdf().set(opt).from($("recibo")).save()
         .then(function () {
-          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroRecibo + " generado y descargado.", "ok");
+          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroFormateado + " generado y descargado.", "ok");
           rbBloquearGenerar(false);
         })
         .catch(function (e) {
@@ -440,15 +450,15 @@ function rbGenerarServidor() {
 
   google.script.run
     .withSuccessHandler(function (reg) {
-      setTxt("recNro", reg.nroRecibo);
-      mostrarMsg("msgGenerar", "Recibo N° " + reg.nroRecibo + " registrado. Generando PDF en el servidor…", "ok");
+      setTxt("recNro", reg.nroFormateado);
+      mostrarMsg("msgGenerar", "Recibo N° " + reg.nroFormateado + " registrado. Generando PDF en el servidor…", "ok");
 
       // Armar HTML autocontenido (estilos inline mínimos) a partir de la vista.
       var html = rbHtmlReciboServidor();
       google.script.run
         .withSuccessHandler(function (pdf) {
           rbDescargarBase64(pdf.base64, pdf.nombre, pdf.tipo);
-          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroRecibo + " generado (modo servidor).", "ok");
+          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroFormateado + " generado (modo servidor).", "ok");
           rbBloquearGenerar(false);
         })
         .withFailureHandler(function (err) {
@@ -470,14 +480,21 @@ function rbHtmlReciboServidor() {
   var css =
     "body{font-family:Arial,Helvetica,sans-serif;color:#1c2733;font-size:12px;margin:0;padding:16px;}" +
     "#recibo{width:100%;}" +
-    ".rec-header{display:flex;justify-content:space-between;border-bottom:2px solid #1f4e79;padding-bottom:10px;margin-bottom:14px;}" +
-    ".rec-logo{max-height:90px;max-width:230px;}" +
+    ".rec-cab{width:100%;border-collapse:collapse;margin-bottom:14px;}" +
+    ".rec-cab>tbody>tr>td{border:1.5px solid #1c2733;vertical-align:top;padding:10px 12px;}" +
+    ".cab-izq{width:56%;}.cab-der{width:44%;text-align:center;}" +
+    ".cab-logo img{max-height:64px;max-width:260px;}" +
     ".rec-logo-placeholder{display:none;}" +
-    ".rec-empresa{text-align:right;font-size:11px;line-height:1.5;}" +
-    ".rec-empresa .razon{font-size:15px;font-weight:700;color:#1f4e79;}" +
-    ".rec-titulo{display:flex;justify-content:space-between;margin:6px 0 14px;}" +
-    ".rec-titulo .t{font-size:22px;font-weight:700;letter-spacing:.08em;color:#1f4e79;}" +
-    ".rec-titulo .n{font-size:16px;font-weight:700;}" +
+    ".cab-subtitulo{font-size:12px;font-weight:600;color:#2b2b2b;margin:6px 0 10px;}" +
+    ".cab-datos{border:1px solid #1c2733;padding:7px 14px;text-align:center;font-size:11px;line-height:1.6;display:inline-block;}" +
+    ".cab-box{width:100%;border-collapse:collapse;margin-bottom:8px;}" +
+    ".cab-box td{border:1.5px solid #1c2733;padding:6px 10px;}" +
+    ".cab-recibo{text-align:center;font-size:20px;font-weight:700;letter-spacing:.06em;background:#eef2f6;}" +
+    ".cab-nro{text-align:center;font-size:15px;font-weight:700;}" +
+    ".cab-fecha .cab-fecha-k{width:40%;text-align:center;font-weight:700;background:#eef2f6;}" +
+    ".cab-fecha .cab-fecha-v{text-align:center;}" +
+    ".cab-fiscal{font-size:11px;line-height:1.6;text-align:center;margin-top:8px;}" +
+    ".rec-obs{font-size:12px;white-space:pre-wrap;line-height:1.5;border:1px solid #d6dee6;border-radius:4px;padding:8px 10px;}" +
     ".rec-bloque{margin-bottom:12px;}" +
     ".rec-bloque .tit{font-size:11px;font-weight:700;text-transform:uppercase;color:#1f4e79;background:#eef2f6;padding:4px 8px;border-radius:4px;margin-bottom:6px;}" +
     ".rec-campos{display:grid;gap:4px 18px;padding:0 4px;}" +

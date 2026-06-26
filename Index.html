@@ -125,6 +125,12 @@
         <div id="fpFilas"><!-- filas dinámicas --></div>
         <button class="btn-secundario btn-pequeno" id="btnAgregarFp" type="button">+ Agregar fila</button>
 
+        <h2>Observaciones</h2>
+        <div class="campo">
+          <label for="inObservaciones">Notas / aclaraciones (opcional)</label>
+          <textarea id="inObservaciones" class="dato" rows="3" placeholder="Texto libre que aparecerá en el recibo debajo del detalle de pagos"></textarea>
+        </div>
+
         <h2>Firma</h2>
         <div class="campo">
           <label for="inFirmadoPor">Firmado por / Aclaración</label>
@@ -155,27 +161,47 @@
       <!-- Este div es el que html2pdf.js exporta a PDF -->
       <div id="recibo">
 
-        <div class="rec-header">
-          <div id="recLogoCont">
-            <div class="rec-logo-placeholder">Logo (completar CONFIG.LOGO_BASE64)</div>
-          </div>
-          <div class="rec-empresa" id="recEmpresa"><!-- se completa por JS --></div>
-        </div>
-
-        <div class="rec-titulo">
-          <span class="t">RECIBO</span>
-          <span class="n">N° <span id="recNro">—</span></span>
-        </div>
+        <table class="rec-cab">
+          <tbody>
+            <tr>
+              <!-- IZQUIERDA: logo + subtítulo + caja de datos -->
+              <td class="cab-izq">
+                <div id="recLogoCont" class="cab-logo">
+                  <div class="rec-logo-placeholder">Logo</div>
+                </div>
+                <div class="cab-subtitulo" id="recSubtitulo">&nbsp;</div>
+                <div class="cab-datos" id="recDatosBox"><!-- dirección/tel/email/IVA --></div>
+              </td>
+              <!-- DERECHA: RECIBO / N° / Fecha + datos fiscales -->
+              <td class="cab-der">
+                <table class="cab-box">
+                  <tbody>
+                    <tr><td class="cab-recibo">RECIBO</td></tr>
+                    <tr><td class="cab-nro">N° <span id="recNro">—</span></td></tr>
+                  </tbody>
+                </table>
+                <table class="cab-box cab-fecha">
+                  <tbody>
+                    <tr>
+                      <td class="cab-fecha-k">Fecha</td>
+                      <td class="cab-fecha-v" id="recFecha">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div class="cab-fiscal" id="recFiscal"><!-- CUIT/IIBB/DerReg/Inicio --></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="rec-bloque">
+          <div class="tit">Detalle</div>
           <div class="rec-campos c3">
-            <div class="item"><span class="k">Fecha:</span> <span id="recFecha">—</span></div>
             <div class="item"><span class="k">Factura:</span> <span id="recFactura">—</span></div>
             <div class="item"><span class="k">Importe:</span> <span id="recImporte">$0,00</span></div>
-          </div>
-          <div class="rec-campos c3" style="margin-top:4px;">
             <div class="item"><span class="k">Paciente:</span> <span id="recPaciente">—</span></div>
             <div class="item"><span class="k">Obra Social:</span> <span id="recObraSocial">—</span></div>
+            <div class="item"></div>
             <div class="item"></div>
           </div>
         </div>
@@ -216,6 +242,11 @@
               <tr><td colspan="4" style="text-align:center;color:#aab4bf;">—</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="rec-bloque" id="recObsBloque" style="display:none;">
+          <div class="tit">Observaciones</div>
+          <div class="rec-obs" id="recObservaciones"></div>
         </div>
 
         <div class="rec-total">
