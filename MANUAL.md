@@ -52,9 +52,13 @@ En el archivo `Codigo.gs`, arriba de todo, reemplazá los `<<< COMPLETAR >>>`:
 
 - `SHEET_FINANCIERO_ID` y `SHEET_CLIENTES_ID` → el ID de cada planilla.
   Está en la URL de la planilla: `.../spreadsheets/d/`**`ESTE_PEDAZO`**`/edit`.
-- `LOGO_BASE64` y `FIRMA_BASE64` → opcional; el data URI de cada imagen.
 - Revisá que los nombres de hoja (`financiero`, `clientes`) y los encabezados en
   `COLS_FINANCIERO` / `COLS_CLIENTES` coincidan con tus planillas reales.
+
+> El **logo ya viene cargado** en `LOGO_BASE64`. La **firma** no es una imagen
+> fija: en el formulario hay un campo **"Firmado por / Aclaración"** que se
+> completa en cada recibo (porque no siempre firma la misma persona). Si más
+> adelante querés una imagen de firma, se pega su data URI en `FIRMA_BASE64`.
 
 Guardá.
 

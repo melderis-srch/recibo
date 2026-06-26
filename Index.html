@@ -121,6 +121,12 @@
         <div id="fpFilas"><!-- filas dinámicas --></div>
         <button class="btn-secundario btn-pequeno" id="btnAgregarFp" type="button">+ Agregar fila</button>
 
+        <h2>Firma</h2>
+        <div class="campo">
+          <label for="inFirmadoPor">Firmado por / Aclaración</label>
+          <input type="text" id="inFirmadoPor" class="dato" placeholder="Nombre y apellido de quien firma">
+        </div>
+
         <!-- Resumen de cálculos en vivo -->
         <div class="totales-resumen">
           <div class="linea"><span>Subtotal (Importe)</span><span id="resSubtotal">$0,00</span></div>
@@ -221,7 +227,10 @@
         <div class="rec-firma">
           <div class="box">
             <div id="recFirmaCont"></div>
-            <div class="linea" id="recFirmaPie">Surcherie Implantes Quirúrgicos</div>
+            <div class="linea">
+              <div id="recFirmadoPor">&nbsp;</div>
+              <div id="recFirmaPie" style="font-size:10px;color:#5a5a5a;">Surcherie Implantes Quirúrgicos</div>
+            </div>
           </div>
         </div>
 

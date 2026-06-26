@@ -353,6 +353,8 @@ function rbRecalcular() {
   setTxt("recTotal", rbMoneda(total));
   setTxt("recSon", rbNumeroALetras(total));
 
+  setTxt("recFirmadoPor", val("inFirmadoPor") || " ");
+
   // Tabla forma de pago
   var fp = rbLeerFormaPago();
   var body = $("recFpBody");
