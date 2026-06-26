@@ -48,7 +48,7 @@ const CONFIG = {
   },
 
   SHEET_FINANCIERO_ID: "1Qy7ylSFMy8-zOCMuGS7B6JUQ8K2BisuDX1WFB5bO-9E",
-  SHEET_FINANCIERO_NOMBRE: "financiero",
+  SHEET_FINANCIERO_NOMBRE: "Ventas/Cobros",
   // Los datos de clientes están en la planilla de recibos, hoja "clientes".
   SHEET_CLIENTES_ID: "1sl866gwCKjx7H5GhP9p6_p_zqJc30uLNLuaGeXR2wiw",
   SHEET_CLIENTES_NOMBRE: "clientes",
@@ -57,13 +57,15 @@ const CONFIG = {
   // primera fila de la hoja). El mapeo es POR NOMBRE, no por posición.
   COLS_FINANCIERO: {
     paciente: "Paciente",
-    obraSocial: "Obra Social",   // se usa para cruzar con la tabla de clientes
+    obraSocial: "Obra social",   // se usa para cruzar con la tabla de clientes
     nroFactura: "N° Factura",
-    importe: "Importe",
-    fecha: "Fecha",
-    retIG: "IG",
-    retIIBB: "IIBB",
-    neto: "Neto"
+    importe: "Monto facturado",
+    fecha: "Fecha factura",
+    retIG: "Retención de ganancias",
+    retIIBB: "Retención de IIBB",
+    retSellos: "Retención Sellados",
+    retSuss: "RetSuss",
+    neto: "Monto Cobrado"        // total efectivamente cobrado; se usa para validar
   },
 
   // Encabezados esperados en la hoja clientes:
@@ -290,6 +292,8 @@ function recibo_buscarFactura(nroFactura) {
     fecha: recibo_formatearFecha_(recibo_celdaRaw_(fila, fin.headers, c.fecha)),
     retIG: recibo_aNumero_(recibo_celda_(fila, fin.headers, c.retIG)),
     retIIBB: recibo_aNumero_(recibo_celda_(fila, fin.headers, c.retIIBB)),
+    retSellos: recibo_aNumero_(recibo_celda_(fila, fin.headers, c.retSellos)),
+    retSuss: recibo_aNumero_(recibo_celda_(fila, fin.headers, c.retSuss)),
     neto: recibo_aNumero_(recibo_celda_(fila, fin.headers, c.neto))
   };
 

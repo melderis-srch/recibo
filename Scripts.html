@@ -231,8 +231,9 @@ function rbAplicarBusqueda(res) {
   $("inImporte").value = f.importe || 0;
   $("inIG").value = f.retIG || 0;
   $("inIIBB").value = f.retIIBB || 0;
-  $("inSellos").value = "";   // siempre manual
-  $("inOtros").value = "";    // siempre manual
+  $("inSellos").value = f.retSellos || 0;   // se trae de la hoja (editable)
+  $("inSuss").value = f.retSuss || 0;       // se trae de la hoja (editable)
+  $("inOtros").value = "";                  // siempre manual
 
   if (res.clienteEncontrado && res.cliente) {
     var c = res.cliente;
@@ -309,9 +310,10 @@ function rbRecalcular() {
   var ig = rbNum(val("inIG"));
   var iibb = rbNum(val("inIIBB"));
   var sellos = rbNum(val("inSellos"));
+  var suss = rbNum(val("inSuss"));
   var otros = rbNum(val("inOtros"));
 
-  var descuento = ig + iibb + sellos + otros;
+  var descuento = ig + iibb + sellos + suss + otros;
   var total = importe - descuento;
 
   // Resumen del panel
@@ -340,6 +342,7 @@ function rbRecalcular() {
   setTxt("recIG", rbMoneda(ig));
   setTxt("recIIBB", rbMoneda(iibb));
   setTxt("recSellos", rbMoneda(sellos));
+  setTxt("recSuss", rbMoneda(suss));
   setTxt("recOtros", rbMoneda(otros));
 
   setTxt("recCliente", val("inCliente") || "—");

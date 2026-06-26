@@ -68,16 +68,20 @@
         <h2>Retenciones</h2>
         <div class="grid-2">
           <div class="campo">
-            <label for="inIG">IG (Imp. a las Ganancias)</label>
+            <label for="inIG">Ret. Ganancias</label>
             <input type="number" step="0.01" id="inIG" class="recalc">
           </div>
           <div class="campo">
-            <label for="inIIBB">IIBB (Ingresos Brutos)</label>
+            <label for="inIIBB">Ret. IIBB</label>
             <input type="number" step="0.01" id="inIIBB" class="recalc">
           </div>
           <div class="campo">
-            <label for="inSellos">Sellos / Sellados (manual)</label>
-            <input type="number" step="0.01" id="inSellos" class="recalc" value="">
+            <label for="inSellos">Ret. Sellados</label>
+            <input type="number" step="0.01" id="inSellos" class="recalc">
+          </div>
+          <div class="campo">
+            <label for="inSuss">Ret. SUSS</label>
+            <input type="number" step="0.01" id="inSuss" class="recalc">
           </div>
           <div class="campo">
             <label for="inOtros">Otros (manual)</label>
@@ -178,11 +182,13 @@
 
         <div class="rec-bloque">
           <div class="tit">Retenciones</div>
-          <div class="rec-campos c4">
-            <div class="item"><span class="k">IG:</span> <span id="recIG">$0,00</span></div>
+          <div class="rec-campos c3">
+            <div class="item"><span class="k">Ganancias:</span> <span id="recIG">$0,00</span></div>
             <div class="item"><span class="k">IIBB:</span> <span id="recIIBB">$0,00</span></div>
-            <div class="item"><span class="k">Sellos:</span> <span id="recSellos">$0,00</span></div>
+            <div class="item"><span class="k">Sellados:</span> <span id="recSellos">$0,00</span></div>
+            <div class="item"><span class="k">SUSS:</span> <span id="recSuss">$0,00</span></div>
             <div class="item"><span class="k">Otros:</span> <span id="recOtros">$0,00</span></div>
+            <div class="item"></div>
           </div>
         </div>
 
