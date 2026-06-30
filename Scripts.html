@@ -139,7 +139,20 @@ document.addEventListener("DOMContentLoaded", function () {
       rbRecalcular();
     }
   });
+
+  // Si llegó un N° de factura por URL (?factura=...), buscarlo solo.
+  rbBuscarFacturaInicial();
 });
+
+/* Autobúsqueda cuando el módulo se abre desde el sistema de gestión con
+ * ?factura=<nro>. El valor lo inyecta recibo_render_ en #rbFacturaInicial. */
+function rbBuscarFacturaInicial() {
+  var el = $("rbFacturaInicial");
+  var nro = el ? el.value.trim() : "";
+  if (!nro) return;
+  $("inNroFactura").value = nro;
+  rbBuscar();
+}
 
 function rbAplicarConfig(cfg) {
   RB.config = cfg || {};

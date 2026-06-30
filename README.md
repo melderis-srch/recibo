@@ -146,6 +146,23 @@ entrada estándar. Para mergearlo:
 
 ---
 
+## 5) Abrir con una factura precargada (deep link)
+
+El módulo acepta el parámetro de URL **`?factura=<nro>`**. Si se abre así, busca
+ese número solo al cargar y deja el recibo listo para revisar/generar:
+
+```
+https://script.google.com/macros/s/<SCRIPT_ID>/exec?factura=2934
+```
+
+`recibo_render_(e)` lee `e.parameter.factura`, lo inyecta en la plantilla
+(`#rbFacturaInicial`) y `rbBuscarFacturaInicial()` dispara la búsqueda. Sin el
+parámetro, el flujo manual no cambia. Esto es lo que usa el **sistema de
+gestión** (botón "Generar recibo" en la lista de facturas) para enlazar cada
+factura con su recibo.
+
+---
+
 ## Notas técnicas
 
 - **Mapeo por nombre de columna** (`recibo_indiceColumna_`), tolerante a

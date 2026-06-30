@@ -102,17 +102,26 @@ const CONFIG = {
  * tu router existente.
  */
 function doGet(e) {
-  return recibo_render_();
+  return recibo_render_(e);
 }
 
 /**
  * Devuelve el HtmlOutput del módulo de recibos.
  * Útil para enchufarlo a un router existente:
- *   if (e.parameter.page === 'recibos') return recibo_render_();
+ *   if (e.parameter.page === 'recibos') return recibo_render_(e);
+ *
+ * Si la URL trae ?factura=<nro> (p. ej. al abrirlo desde el sistema de
+ * gestión), ese número se inyecta en la plantilla y la UI lo busca sola al
+ * cargar. Sin el parámetro, el flujo manual sigue igual.
  */
-function recibo_render_() {
-  return HtmlService.createTemplateFromFile("Index")
-    .evaluate()
+function recibo_render_(e) {
+  var tpl = HtmlService.createTemplateFromFile("Index");
+  // Siempre se define (aunque sea ""): la plantilla la imprime con <?= ?> y
+  // un scriptlet sobre una variable indefinida rompería el render.
+  tpl.facturaInicial = (e && e.parameter && e.parameter.factura)
+    ? String(e.parameter.factura).trim()
+    : "";
+  return tpl.evaluate()
     .setTitle("Recibos de Cobranza – Surcherie")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);

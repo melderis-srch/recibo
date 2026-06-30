@@ -26,6 +26,9 @@
     <section class="panel" id="panelForm">
 
       <h2>Buscar factura</h2>
+      <!-- N° de factura pasado por URL (?factura=...) desde el sistema de
+           gestión. Vacío si se abrió el módulo a mano. -->
+      <input type="hidden" id="rbFacturaInicial" value="<?= facturaInicial ?>">
       <div class="buscador">
         <div class="campo">
           <label for="inNroFactura">N° de factura</label>
