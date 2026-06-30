@@ -122,6 +122,12 @@ document.addEventListener("DOMContentLoaded", function () {
     })
     .recibo_listarFacturas();
 
+  // Próximo N° de recibo (vista previa; el definitivo se asigna al generar)
+  google.script.run
+    .withSuccessHandler(function (n) { if (n) setTxt("recNro", n); })
+    .withFailureHandler(function () { /* sin preview de número, no es crítico */ })
+    .recibo_numeroPreview();
+
   // Listeners
   $("btnBuscar").addEventListener("click", rbBuscar);
   $("inNroFactura").addEventListener("keydown", function (e) { if (e.key === "Enter") rbBuscar(); });
@@ -131,6 +137,7 @@ document.addEventListener("DOMContentLoaded", function () {
   $("btnAgregarFp").addEventListener("click", function () { rbAgregarFilaFp(); });
   $("btnGenerar").addEventListener("click", rbGenerarClienteHtml2pdf);
   $("btnGenerarServidor").addEventListener("click", rbGenerarServidor);
+  $("btnEnviarEmail").addEventListener("click", rbEnviarEmail);
 
   // Recalcular ante cualquier edición
   document.addEventListener("input", function (e) {
@@ -165,15 +172,8 @@ function rbAplicarConfig(cfg) {
     rbLinea("Inicio de actividades: " + (emp.inicioActividades || ""));
 
   $("recFirmaPie").textContent = emp.razonSocial || "";
-
-  // Logo
-  if (RB.config.logo && RB.config.logo.indexOf("data:") === 0) {
-    $("recLogoCont").innerHTML = '<img class="rec-logo" src="' + RB.config.logo + '" alt="Logo">';
-  }
-  // Firma
-  if (RB.config.firma && RB.config.firma.indexOf("data:") === 0) {
-    $("recFirmaCont").innerHTML = '<img src="' + RB.config.firma + '" alt="Firma">';
-  }
+  // El logo y la firma los imprime el servidor directamente en el HTML
+  // (ver recibo_render_ + scriptlets en Index.html).
 }
 
 function rbLinea(t) { return t ? "<div>" + rbEsc(t) + "</div>" : ""; }
@@ -247,6 +247,7 @@ function rbAplicarBusqueda(res) {
     $("inLocalidad").value = c.localidad || "";
     $("inCuit").value = c.cuit || "";
     $("inIva").value = c.iva || "";
+    $("inEmail").value = c.email || "";
     mostrarMsg("msgCliente", "", "");
   } else {
     $("inCliente").value = f.obraSocial || "";
@@ -254,6 +255,7 @@ function rbAplicarBusqueda(res) {
     $("inLocalidad").value = "";
     $("inCuit").value = "";
     $("inIva").value = "";
+    $("inEmail").value = "";
     mostrarMsg("msgCliente", res.mensajeCliente || "Cargá los datos del cliente manualmente.", "aviso");
   }
 
@@ -474,6 +476,49 @@ function rbGenerarServidor() {
     .recibo_registrar(rbDatosRegistro());
 }
 
+// --- Enviar el recibo por email al cliente (PDF adjunto) ---
+function rbEnviarEmail() {
+  var destino = (val("inEmail") || "").trim();
+  if (!destino || destino.indexOf("@") < 0) {
+    mostrarMsg("msgGenerar", "Ingresá un email de destino válido (campo Email del cliente).", "error");
+    return;
+  }
+  rbBloquearGenerar(true, "Registrando recibo…");
+
+  google.script.run
+    .withSuccessHandler(function (reg) {
+      setTxt("recNro", reg.nroFormateado);
+      var c = rbRecalcular();
+      mostrarMsg("msgGenerar", "Recibo N° " + reg.nroFormateado + " registrado. Enviando email a " + destino + "…", "ok");
+
+      var params = {
+        html: rbHtmlReciboServidor(),
+        nombreArchivo: rbNombreArchivo(),
+        destino: destino,
+        nroRecibo: reg.nroFormateado,
+        nroFactura: (RB.facturaActual && RB.facturaActual.financiero.nroFactura) || val("inNroFactura"),
+        cliente: val("inCliente") || val("inObraSocial"),
+        total: rbMoneda(c.total)
+      };
+
+      google.script.run
+        .withSuccessHandler(function (r) {
+          mostrarMsg("msgGenerar", "✓ Recibo N° " + reg.nroFormateado + " enviado a " + r.destino + ".", "ok");
+          rbBloquearGenerar(false);
+        })
+        .withFailureHandler(function (err) {
+          mostrarMsg("msgGenerar", "No se pudo enviar el email: " + err.message, "error");
+          rbBloquearGenerar(false);
+        })
+        .recibo_enviarPorEmail(params);
+    })
+    .withFailureHandler(function (err) {
+      mostrarMsg("msgGenerar", "No se pudo registrar el recibo: " + err.message, "error");
+      rbBloquearGenerar(false);
+    })
+    .recibo_registrar(rbDatosRegistro());
+}
+
 // HTML del recibo con estilos inline, para el conversor del servidor.
 function rbHtmlReciboServidor() {
   var nodo = $("recibo").cloneNode(true);
@@ -533,6 +578,7 @@ function rbDescargarBase64(base64, nombre, tipo) {
 function rbBloquearGenerar(estado, texto) {
   $("btnGenerar").disabled = estado;
   $("btnGenerarServidor").disabled = estado;
+  $("btnEnviarEmail").disabled = estado;
   if (estado && texto) mostrarMsg("msgGenerar", '<span class="spinner spinner-azul"></span>' + texto, "ok");
 }
 </script>

@@ -75,7 +75,16 @@ const CONFIG = {
     direccion: "Dirección",
     localidad: "Localidad",
     cuit: "CUIT",
-    iva: "IVA"
+    iva: "IVA",
+    email: "Email"   // columna nueva en la hoja clientes para enviar el recibo
+  },
+
+  // Envío del recibo por email (MailApp, desde la cuenta que despliega la app).
+  EMAIL: {
+    enviarCopiaA: "administracion@surcherie.com.ar", // copia interna (CC); "" para no enviar
+    replyTo: "administracion@surcherie.com.ar",      // a dónde responde el cliente; "" para omitir
+    remitenteNombre: "Surcherie Implantes Quirúrgicos",
+    asuntoPrefijo: "Recibo de cobranza"
   },
 
   LOGO_BASE64: "data:image/png;base64,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",
@@ -111,11 +120,27 @@ function doGet(e) {
  *   if (e.parameter.page === 'recibos') return recibo_render_();
  */
 function recibo_render_() {
-  return HtmlService.createTemplateFromFile("Index")
-    .evaluate()
+  var t = HtmlService.createTemplateFromFile("Index");
+  // El logo y la firma se imprimen directo en el HTML desde el servidor
+  // (más confiable que inyectarlos por JS con un data URI largo).
+  t.logoData = CONFIG.LOGO_BASE64 || "";
+  t.firmaData = CONFIG.FIRMA_BASE64 || "";
+  return t.evaluate()
     .setTitle("Recibos de Cobranza – Surcherie")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * Próximo N° de recibo formateado, sin escribir nada. Para mostrarlo como
+ * vista previa en la UI (el número definitivo se asigna al generar).
+ */
+function recibo_numeroPreview() {
+  try {
+    return recibo_formatearNumero_(recibo_proximoNumero_());
+  } catch (e) {
+    return "";
+  }
 }
 
 /**
@@ -342,7 +367,8 @@ function recibo_buscarCliente_(nombreObraSocial) {
           direccion: recibo_celda_(fila, cli.headers, c.direccion),
           localidad: recibo_celda_(fila, cli.headers, c.localidad),
           cuit: recibo_celda_(fila, cli.headers, c.cuit),
-          iva: recibo_celda_(fila, cli.headers, c.iva)
+          iva: recibo_celda_(fila, cli.headers, c.iva),
+          email: recibo_celda_(fila, cli.headers, c.email)
         }
       };
     }
@@ -472,6 +498,76 @@ function recibo_generarPdfServidor(html, nombreArchivo) {
     nombre: blob.getName(),
     tipo: "application/pdf"
   };
+}
+
+
+/* =========================================================================
+ *  EMAIL — envío del recibo al cliente con el PDF adjunto y plantilla HTML
+ * ========================================================================= */
+
+/**
+ * Envía el recibo por email al cliente, con el PDF adjunto.
+ *
+ * @param {{html:string, nombreArchivo:string, destino:string, nroRecibo:string,
+ *          nroFactura:string, cliente:string, total:string}} params
+ * @return {{ok:boolean, destino:string}}
+ */
+function recibo_enviarPorEmail(params) {
+  params = params || {};
+  var destino = String(params.destino || "").trim();
+  if (!destino || destino.indexOf("@") === -1) {
+    throw new Error("Email de destino inválido o vacío.");
+  }
+
+  // PDF a partir del HTML del recibo.
+  var nombre = String(params.nombreArchivo || "Recibo").replace(/[\\/:*?"<>|]/g, "_");
+  var blob = Utilities.newBlob(params.html || "", "text/html", nombre + ".html")
+    .getAs("application/pdf");
+  blob.setName(nombre + ".pdf");
+
+  var emp = CONFIG.EMPRESA;
+  var em = CONFIG.EMAIL || {};
+
+  var cuerpo = recibo_cuerpoEmail_({
+    cliente: params.cliente || "",
+    nroRecibo: params.nroRecibo || "",
+    nroFactura: params.nroFactura || "",
+    total: params.total || "",
+    empresa: emp.razonSocial || "",
+    direccion: emp.direccion || "",
+    tel: emp.tel || ""
+  });
+
+  var asunto = (em.asuntoPrefijo || "Recibo de cobranza") +
+    (params.nroRecibo ? " N° " + params.nroRecibo : "") + " - " + (emp.razonSocial || "");
+
+  var opciones = {
+    name: em.remitenteNombre || emp.razonSocial || "Recibos",
+    htmlBody: cuerpo,
+    attachments: [blob]
+  };
+  if (em.enviarCopiaA) opciones.cc = em.enviarCopiaA;
+  if (em.replyTo) opciones.replyTo = em.replyTo;
+
+  // Cuerpo de texto plano como fallback para clientes sin HTML.
+  MailApp.sendEmail(destino, asunto, "Adjuntamos su recibo de cobranza.", opciones);
+
+  return { ok: true, destino: destino };
+}
+
+/**
+ * Renderiza la plantilla HTML del cuerpo del email con las variables del recibo.
+ */
+function recibo_cuerpoEmail_(vars) {
+  var t = HtmlService.createTemplateFromFile("PlantillaEmail");
+  t.cliente = vars.cliente;
+  t.nroRecibo = vars.nroRecibo;
+  t.nroFactura = vars.nroFactura;
+  t.total = vars.total;
+  t.empresa = vars.empresa;
+  t.direccion = vars.direccion;
+  t.tel = vars.tel;
+  return t.evaluate().getContent();
 }
 
 

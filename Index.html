@@ -112,6 +112,10 @@
             <label for="inIva">IVA</label>
             <input type="text" id="inIva">
           </div>
+          <div class="campo">
+            <label for="inEmail">Email (para enviar el recibo)</label>
+            <input type="email" id="inEmail" placeholder="cliente@dominio.com">
+          </div>
         </div>
 
         <h2>Forma de pago</h2>
@@ -149,6 +153,7 @@
         <div class="acciones">
           <button class="btn-primario" id="btnGenerar" type="button">Generar y descargar PDF</button>
           <button class="btn-secundario" id="btnGenerarServidor" type="button">PDF (modo servidor)</button>
+          <button class="btn-secundario" id="btnEnviarEmail" type="button">Enviar por email</button>
         </div>
         <div id="msgGenerar" class="msg"></div>
       </div>
@@ -167,7 +172,11 @@
               <!-- IZQUIERDA: logo + subtítulo + caja de datos -->
               <td class="cab-izq">
                 <div id="recLogoCont" class="cab-logo">
-                  <div class="rec-logo-placeholder">Logo</div>
+                  <? if (logoData && logoData.indexOf('data:') === 0) { ?>
+                    <img class="cab-logo-img" src="<?!= logoData ?>" alt="Logo">
+                  <? } else { ?>
+                    <div class="rec-logo-placeholder">Logo</div>
+                  <? } ?>
                 </div>
                 <div class="cab-subtitulo" id="recSubtitulo">&nbsp;</div>
                 <div class="cab-datos" id="recDatosBox"><!-- dirección/tel/email/IVA --></div>
@@ -263,7 +272,7 @@
 
         <div class="rec-firma">
           <div class="box">
-            <div id="recFirmaCont"></div>
+            <div id="recFirmaCont"><? if (firmaData && firmaData.indexOf('data:') === 0) { ?><img src="<?!= firmaData ?>" alt="Firma"><? } ?></div>
             <div class="linea">
               <div id="recFirmadoPor">&nbsp;</div>
               <div id="recFirmaPie" style="font-size:10px;color:#5a5a5a;">Surcherie Implantes Quirúrgicos</div>

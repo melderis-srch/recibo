@@ -1,0 +1,31 @@
+<!--
+  PlantillaEmail.html — cuerpo del email de envío del recibo.
+  Se renderiza server-side con HtmlService.createTemplateFromFile en
+  recibo_cuerpoEmail_(). Las variables (<?= ... ?>) se setean ahí.
+  Estilos inline porque los clientes de correo no soportan <style> externos.
+-->
+<div style="font-family:Arial,Helvetica,sans-serif;color:#1c2733;font-size:14px;line-height:1.5;max-width:560px;">
+  <p>Estimados de <strong><?= cliente ?></strong>:</p>
+
+  <p>
+    Adjuntamos el recibo de cobranza
+    <strong>N°&nbsp;<?= nroRecibo ?></strong><? if (nroFactura) { ?>
+    correspondiente a la factura <strong><?= nroFactura ?></strong><? } ?><? if (total) { ?>,
+    por un total de <strong><?= total ?></strong><? } ?>.
+  </p>
+
+  <p>Ante cualquier consulta quedamos a disposición.</p>
+
+  <p style="margin-top:24px;">
+    Saludos cordiales,<br>
+    <strong><?= empresa ?></strong><br>
+    <?= direccion ?><br>
+    Tel: <?= tel ?>
+  </p>
+
+  <hr style="border:none;border-top:1px solid #d6dee6;margin:20px 0;">
+  <p style="font-size:11px;color:#8a94a0;">
+    Este mensaje fue enviado automáticamente desde el sistema de recibos de
+    <?= empresa ?>. El recibo va adjunto en formato PDF.
+  </p>
+</div>
