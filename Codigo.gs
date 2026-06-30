@@ -111,20 +111,25 @@ const CONFIG = {
  * tu router existente.
  */
 function doGet(e) {
-  return recibo_render_();
+  return recibo_render_(e);
 }
 
 /**
  * Devuelve el HtmlOutput del módulo de recibos.
  * Útil para enchufarlo a un router existente:
- *   if (e.parameter.page === 'recibos') return recibo_render_();
+ *   if (e.parameter.page === 'recibos') return recibo_render_(e);
+ *
+ * Soporta abrir la app con la factura precargada desde otra app:
+ *   .../exec?factura=0001-00001234  -> autobusca esa factura al cargar.
  */
-function recibo_render_() {
+function recibo_render_(e) {
   var t = HtmlService.createTemplateFromFile("Index");
   // El logo y la firma se imprimen directo en el HTML desde el servidor
   // (más confiable que inyectarlos por JS con un data URI largo).
   t.logoData = CONFIG.LOGO_BASE64 || "";
   t.firmaData = CONFIG.FIRMA_BASE64 || "";
+  // N° de factura recibido por URL (lo pasa la app principal). Vacío si no viene.
+  t.facturaParam = (e && e.parameter && e.parameter.factura) ? String(e.parameter.factura) : "";
   return t.evaluate()
     .setTitle("Recibos de Cobranza – Surcherie")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")

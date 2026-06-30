@@ -146,6 +146,9 @@ document.addEventListener("DOMContentLoaded", function () {
       rbRecalcular();
     }
   });
+
+  // Si la factura vino por URL (?factura=...), autobuscar al cargar.
+  if (($("inNroFactura").value || "").trim()) rbBuscar();
 });
 
 function rbAplicarConfig(cfg) {
@@ -527,11 +530,11 @@ function rbHtmlReciboServidor() {
     "#recibo{width:100%;}" +
     ".rec-cab{width:100%;border-collapse:collapse;margin-bottom:14px;}" +
     ".rec-cab>tbody>tr>td{border:1.5px solid #1c2733;vertical-align:top;padding:10px 12px;}" +
-    ".cab-izq{width:56%;}.cab-der{width:44%;text-align:center;}" +
-    ".cab-logo img{max-height:64px;max-width:260px;}" +
+    ".cab-izq{width:56%;text-align:center;vertical-align:middle;}.cab-der{width:44%;text-align:center;}" +
+    ".cab-logo{text-align:center;}.cab-logo img{max-height:78px;max-width:90%;}" +
     ".rec-logo-placeholder{display:none;}" +
-    ".cab-subtitulo{font-size:12px;font-weight:600;color:#2b2b2b;margin:6px 0 10px;}" +
-    ".cab-datos{border:1px solid #1c2733;padding:7px 14px;text-align:center;font-size:11px;line-height:1.6;display:inline-block;}" +
+    ".cab-subtitulo{font-size:13px;font-weight:600;color:#2b2b2b;margin:10px 0 14px;text-align:center;}" +
+    ".cab-datos{border:1px solid #1c2733;padding:12px 20px;text-align:center;font-size:12.5px;line-height:1.8;display:block;width:90%;margin:0 auto;}" +
     ".cab-box{width:100%;border-collapse:collapse;margin-bottom:8px;}" +
     ".cab-box td{border:1.5px solid #1c2733;padding:6px 10px;}" +
     ".cab-recibo{text-align:center;font-size:20px;font-weight:700;letter-spacing:.06em;background:#eef2f6;}" +
