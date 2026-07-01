@@ -82,7 +82,7 @@ const CONFIG = {
   // Envío del recibo por email (MailApp, desde la cuenta que despliega la app).
   EMAIL: {
     enviarCopiaA: "administracion@surcherie.com.ar", // copia interna fija (CC); "" para no enviar
-    copiaAlUsuario: true,                            // CC también a quien genera el recibo (si está logueado)
+    copiaAlUsuario: false,                           // redundante si el envío sale desde el propio usuario
     replyTo: "administracion@surcherie.com.ar",      // a dónde responde el cliente; "" para omitir
     remitenteNombre: "Surcherie Implantes Quirúrgicos",
     asuntoPrefijo: "Recibo de cobranza"
