@@ -83,7 +83,7 @@ const CONFIG = {
   EMAIL: {
     enviarCopiaA: "administracion@surcherie.com.ar", // copia interna fija (CC); "" para no enviar
     copiaAlUsuario: false,                           // redundante si el envío sale desde el propio usuario
-    replyTo: "administracion@surcherie.com.ar",      // a dónde responde el cliente; "" para omitir
+    replyTo: "",                                     // vacío = las respuestas van a QUIEN ENVIÓ el recibo. Poné una dirección fija solo si querés forzar otra.
     remitenteNombre: "Surcherie Implantes Quirúrgicos",
     asuntoPrefijo: "Recibo de cobranza"
   },
@@ -697,7 +697,10 @@ function recibo_enviarPorEmail(params) {
     attachments: [blob]
   };
   if (ccs.length) opciones.cc = ccs.join(",");
-  if (em.replyTo) opciones.replyTo = em.replyTo;
+  // Responder-a: por defecto, al remitente (quien envía). Solo se usa una
+  // dirección fija si CONFIG.EMAIL.replyTo está definido.
+  var replyTo = em.replyTo || usuario;
+  if (replyTo) opciones.replyTo = replyTo;
 
   // Cuerpo de texto plano como fallback para clientes sin HTML.
   MailApp.sendEmail(destino, asunto, "Adjuntamos su recibo de cobranza.", opciones);
