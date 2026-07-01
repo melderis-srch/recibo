@@ -110,7 +110,12 @@ const CONFIG = {
     { id: "agustin",  nombre: "Agustín Ortega",  driveId: "", base64: "" }
   ],
 
-  HOJA_LOG_RECIBOS: "recibos", // hoja (dentro de la planilla financiero) donde se registra cada recibo emitido
+  HOJA_LOG_RECIBOS: "recibos", // nombre de la hoja donde se registra cada recibo emitido
+  // Planilla donde vive el log de recibos. Con "ejecutar como el usuario",
+  // conviene una planilla APARTE que el equipo tenga como Editor (así no hay
+  // que darles edición sobre financiero). Si queda "", el log va en financiero.
+  // También se puede setear como Propiedad del Script SHEET_RECIBOS_LOG_ID.
+  SHEET_RECIBOS_LOG_ID: "",
 
   // Numeración del recibo. Se muestra como PUNTO_VENTA-XXXXXXXX (8 dígitos).
   // Ej.: 3041 -> "0001-00003041".
@@ -518,7 +523,10 @@ function recibo_buscarCliente_(nombreObraSocial) {
 
 /** Obtiene (creándola si hace falta) la hoja de log de recibos. */
 function recibo_obtenerHojaLog_() {
-  var ss = SpreadsheetApp.openById(CONFIG.SHEET_FINANCIERO_ID);
+  // Planilla del log: CONFIG, o Propiedad del Script, o (fallback) financiero.
+  var logId = CONFIG.SHEET_RECIBOS_LOG_ID ||
+    recibo_prop_("SHEET_RECIBOS_LOG_ID") || CONFIG.SHEET_FINANCIERO_ID;
+  var ss = SpreadsheetApp.openById(logId);
   var sheet = ss.getSheetByName(CONFIG.HOJA_LOG_RECIBOS);
   if (!sheet) {
     sheet = ss.insertSheet(CONFIG.HOJA_LOG_RECIBOS);
