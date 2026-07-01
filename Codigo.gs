@@ -105,8 +105,8 @@ const CONFIG = {
   // FIRMA_<ID>_DRIVE_ID (ej.: FIRMA_GUSTAVO_DRIVE_ID, FIRMA_HUGO_DRIVE_ID),
   // o poné el driveId directamente acá.
   FIRMAS: [
-    { id: "gustavo", nombre: "Gustavo Cobelli", driveId: "", base64: "" },
-    { id: "hugo",    nombre: "Hugo Salami",     driveId: "", base64: "" }
+    { id: "lucrecia", nombre: "Lucrecia Becker", driveId: "", base64: "" },
+    { id: "agustin",  nombre: "Agustín Ortega",  driveId: "", base64: "" }
   ],
 
   HOJA_LOG_RECIBOS: "recibos", // hoja (dentro de la planilla financiero) donde se registra cada recibo emitido
