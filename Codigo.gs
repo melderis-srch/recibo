@@ -153,6 +153,9 @@ function recibo_render_(e) {
     CONFIG.FIRMA_DRIVE_ID || recibo_prop_("FIRMA_DRIVE_ID"), "firma");
   // N° de factura recibido por URL (lo pasa la app principal). Vacío si no viene.
   t.facturaParam = (e && e.parameter && e.parameter.factura) ? String(e.parameter.factura) : "";
+  // Sello de versión visible: sirve para confirmar que el deploy tomó el código
+  // nuevo. Subir este valor cada vez que se cambie algo relevante.
+  t.appVersion = "2026-07-01-firmas";
   return t.evaluate()
     .setTitle("Recibos de Cobranza – Surcherie")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")
