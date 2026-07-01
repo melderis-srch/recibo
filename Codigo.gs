@@ -162,6 +162,48 @@ function recibo_numeroPreview() {
 }
 
 /**
+ * DIAGNÓSTICO del logo. Ejecutar manualmente desde el editor de Apps Script
+ * (seleccionar recibo_diagnosticoLogo → Ejecutar) y leer el Registro de
+ * ejecución. Dice si el ID llega, si el archivo se puede leer y si el data URI
+ * se arma. Sirve para aislar por qué no aparece el logo.
+ */
+function recibo_diagnosticoLogo() {
+  var idConfig = CONFIG.LOGO_DRIVE_ID || "";
+  var idProp = recibo_prop_("LOGO_DRIVE_ID");
+  Logger.log("CONFIG.LOGO_DRIVE_ID: '" + idConfig + "'");
+  Logger.log("Propiedad del Script LOGO_DRIVE_ID: '" + idProp + "'");
+
+  var claves = [];
+  try { claves = Object.keys(PropertiesService.getScriptProperties().getProperties()); } catch (e) {}
+  Logger.log("Nombres de todas las Propiedades del Script: " + JSON.stringify(claves));
+
+  var id = idConfig || idProp;
+  if (!id) {
+    Logger.log(">> NO hay ID. La propiedad debe llamarse EXACTAMENTE 'LOGO_DRIVE_ID' " +
+      "y el valor ser solo el ID (no la URL). Revisá el nombre en la lista de arriba.");
+    return;
+  }
+  if (id.indexOf("/") > -1 || id.indexOf("http") === 0) {
+    Logger.log(">> El valor parece una URL, no un ID. Usá solo el ID: " +
+      "https://drive.google.com/file/d/ESTE_ID/view");
+  }
+  try {
+    var file = DriveApp.getFileById(id);
+    Logger.log("Archivo en Drive: '" + file.getName() + "'");
+    var blob = file.getBlob();
+    Logger.log("ContentType: " + blob.getContentType() + " | bytes: " + blob.getBytes().length);
+    var uri = recibo_imagenDataUri_("", id, "logo_diag");
+    Logger.log("data URI length: " + uri.length);
+    Logger.log(uri.length > 0 ? ">> OK: el logo se puede cargar. Si no aparece, es la DEPLOYMENT/versión." :
+      ">> El data URI salió vacío.");
+  } catch (err) {
+    Logger.log(">> ERROR leyendo el archivo de Drive: " + err.message);
+    Logger.log(">> Causas típicas: ID incorrecto, falta RE-AUTORIZAR el permiso de Drive, " +
+      "o la cuenta que ejecuta no tiene acceso al archivo (compartilo o subilo con esa cuenta).");
+  }
+}
+
+/**
  * Lee una Propiedad del Script (Project Settings → Script Properties).
  * Sirve como "variable de entorno": permite configurar valores sin tocar el
  * código. Devuelve "" si no existe o no hay acceso.
