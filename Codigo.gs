@@ -135,8 +135,12 @@ function recibo_render_(e) {
   var t = HtmlService.createTemplateFromFile("Index");
   // El logo y la firma se imprimen directo en el HTML desde el servidor
   // (más confiable que inyectarlos por JS con un data URI largo).
-  t.logoData = recibo_imagenDataUri_(CONFIG.LOGO_BASE64, CONFIG.LOGO_DRIVE_ID, "logo");
-  t.firmaData = recibo_imagenDataUri_(CONFIG.FIRMA_BASE64, CONFIG.FIRMA_DRIVE_ID, "firma");
+  t.logoData = recibo_imagenDataUri_(
+    CONFIG.LOGO_BASE64 || recibo_prop_("LOGO_BASE64"),
+    CONFIG.LOGO_DRIVE_ID || recibo_prop_("LOGO_DRIVE_ID"), "logo");
+  t.firmaData = recibo_imagenDataUri_(
+    CONFIG.FIRMA_BASE64 || recibo_prop_("FIRMA_BASE64"),
+    CONFIG.FIRMA_DRIVE_ID || recibo_prop_("FIRMA_DRIVE_ID"), "firma");
   // N° de factura recibido por URL (lo pasa la app principal). Vacío si no viene.
   t.facturaParam = (e && e.parameter && e.parameter.factura) ? String(e.parameter.factura) : "";
   return t.evaluate()
@@ -152,6 +156,19 @@ function recibo_render_(e) {
 function recibo_numeroPreview() {
   try {
     return recibo_formatearNumero_(recibo_proximoNumero_());
+  } catch (e) {
+    return "";
+  }
+}
+
+/**
+ * Lee una Propiedad del Script (Project Settings → Script Properties).
+ * Sirve como "variable de entorno": permite configurar valores sin tocar el
+ * código. Devuelve "" si no existe o no hay acceso.
+ */
+function recibo_prop_(key) {
+  try {
+    return PropertiesService.getScriptProperties().getProperty(key) || "";
   } catch (e) {
     return "";
   }
