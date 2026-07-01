@@ -81,7 +81,8 @@ const CONFIG = {
 
   // Envío del recibo por email (MailApp, desde la cuenta que despliega la app).
   EMAIL: {
-    enviarCopiaA: "administracion@surcherie.com.ar", // copia interna (CC); "" para no enviar
+    enviarCopiaA: "administracion@surcherie.com.ar", // copia interna fija (CC); "" para no enviar
+    copiaAlUsuario: true,                            // CC también a quien genera el recibo (si está logueado)
     replyTo: "administracion@surcherie.com.ar",      // a dónde responde el cliente; "" para omitir
     remitenteNombre: "Surcherie Implantes Quirúrgicos",
     asuntoPrefijo: "Recibo de cobranza"
@@ -675,18 +676,25 @@ function recibo_enviarPorEmail(params) {
   var asunto = (em.asuntoPrefijo || "Recibo de cobranza") +
     (params.nroRecibo ? " N° " + params.nroRecibo : "") + " - " + (emp.razonSocial || "");
 
+  // Armar la lista de CC: copia fija interna + (opcional) el usuario que genera.
+  var usuario = "";
+  try { usuario = Session.getActiveUser().getEmail() || ""; } catch (e) { usuario = ""; }
+  var ccs = [];
+  if (em.enviarCopiaA) ccs.push(em.enviarCopiaA);
+  if (em.copiaAlUsuario && usuario && ccs.indexOf(usuario) === -1) ccs.push(usuario);
+
   var opciones = {
     name: em.remitenteNombre || emp.razonSocial || "Recibos",
     htmlBody: cuerpo,
     attachments: [blob]
   };
-  if (em.enviarCopiaA) opciones.cc = em.enviarCopiaA;
+  if (ccs.length) opciones.cc = ccs.join(",");
   if (em.replyTo) opciones.replyTo = em.replyTo;
 
   // Cuerpo de texto plano como fallback para clientes sin HTML.
   MailApp.sendEmail(destino, asunto, "Adjuntamos su recibo de cobranza.", opciones);
 
-  return { ok: true, destino: destino };
+  return { ok: true, destino: destino, cc: ccs.join(", "), usuario: usuario };
 }
 
 /**
