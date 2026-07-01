@@ -1,7 +1,10 @@
 <!--
   PlantillaEmail.html — cuerpo del email de envío del recibo.
   Se renderiza server-side con HtmlService.createTemplateFromFile en
-  recibo_cuerpoEmail_(). Las variables (<?= ... ?>) se setean ahí.
+  recibo_cuerpoEmail_(). Las variables (cliente, nroRecibo, nroFactura, total,
+  empresa, direccion, tel) se setean ahí. OJO: no escribas la secuencia de
+  scriptlet de impresion ni siquiera en comentarios, porque el motor de
+  plantillas la compila igual y rompe.
   Estilos inline porque los clientes de correo no soportan <style> externos.
 -->
 <div style="font-family:Arial,Helvetica,sans-serif;color:#1c2733;font-size:14px;line-height:1.5;max-width:560px;">
