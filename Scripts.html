@@ -8,7 +8,8 @@
 var RB = {                 // namespace del cliente (evita globals sueltos)
   config: null,            // { empresa, logo, firma } desde el servidor
   facturaActual: null,     // datos crudos de la última factura buscada
-  fpContador: 0            // ids de filas de forma de pago
+  fpContador: 0,           // ids de filas de forma de pago
+  firmas: {}               // firmas por id: { id: {id, nombre, dataUri} }
 };
 
 /* ---------------------- Utilidades de formato ------------------------------ */
@@ -128,6 +129,12 @@ document.addEventListener("DOMContentLoaded", function () {
     .withFailureHandler(function () { /* sin preview de número, no es crítico */ })
     .recibo_numeroPreview();
 
+  // Firmas seleccionables
+  google.script.run
+    .withSuccessHandler(rbPoblarFirmas)
+    .withFailureHandler(function () { /* sin firmas configuradas, no es crítico */ })
+    .recibo_obtenerFirmas();
+
   // Listeners
   $("btnBuscar").addEventListener("click", rbBuscar);
   $("inNroFactura").addEventListener("keydown", function (e) { if (e.key === "Enter") rbBuscar(); });
@@ -138,6 +145,7 @@ document.addEventListener("DOMContentLoaded", function () {
   $("btnGenerar").addEventListener("click", rbGenerarClienteHtml2pdf);
   $("btnGenerarServidor").addEventListener("click", rbGenerarServidor);
   $("btnEnviarEmail").addEventListener("click", rbEnviarEmail);
+  $("selFirma").addEventListener("change", rbAplicarFirma);
 
   // Recalcular ante cualquier edición
   document.addEventListener("input", function (e) {
@@ -197,6 +205,32 @@ function rbPoblarFacturas(lista) {
     html += '<option value="' + rbEsc(f.nroFactura) + '">' + rbEsc(etiqueta) + '</option>';
   });
   sel.innerHTML = html;
+}
+
+/* ---- Firmas seleccionables ---- */
+function rbPoblarFirmas(lista) {
+  var sel = $("selFirma");
+  RB.firmas = {};
+  var html = '<option value="">— Sin firma / manual —</option>';
+  (lista || []).forEach(function (f) {
+    RB.firmas[f.id] = f;
+    var etiqueta = f.nombre + (f.dataUri ? "" : " (sin imagen cargada)");
+    html += '<option value="' + rbEsc(f.id) + '">' + rbEsc(etiqueta) + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
+// Al elegir una firma: muestra su imagen en el recibo y precarga la aclaración.
+function rbAplicarFirma() {
+  var f = RB.firmas[$("selFirma").value];
+  if (f) {
+    $("recFirmaCont").innerHTML = f.dataUri
+      ? '<img src="' + f.dataUri + '" alt="Firma">' : '';
+    $("inFirmadoPor").value = f.nombre || "";
+  } else {
+    $("recFirmaCont").innerHTML = "";
+  }
+  rbRecalcular();
 }
 
 /* ===========================================================================

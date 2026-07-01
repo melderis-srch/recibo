@@ -96,8 +96,18 @@ const CONFIG = {
   //      La imagen debe ser accesible por la cuenta que despliega la app.
   LOGO_BASE64: "",
   LOGO_DRIVE_ID: "",   // ej.: "1AbC...". Si está seteado y LOGO_BASE64 vacío, se usa Drive.
-  FIRMA_BASE64: "",    // se completa cuando la firma sea fija; por ahora se usa el campo editable "Firmado por"
+  FIRMA_BASE64: "",    // firma por defecto (opcional); normalmente se usa FIRMAS de abajo
   FIRMA_DRIVE_ID: "",
+
+  // Firmas seleccionables según quién firma el recibo. En la UI aparece un
+  // desplegable "Firmar como" y la imagen elegida se muestra en el documento.
+  // Cargá el ID de Drive de cada firma como Propiedad del Script llamada
+  // FIRMA_<ID>_DRIVE_ID (ej.: FIRMA_GUSTAVO_DRIVE_ID, FIRMA_HUGO_DRIVE_ID),
+  // o poné el driveId directamente acá.
+  FIRMAS: [
+    { id: "gustavo", nombre: "Gustavo Cobelli", driveId: "", base64: "" },
+    { id: "hugo",    nombre: "Hugo Salami",     driveId: "", base64: "" }
+  ],
 
   HOJA_LOG_RECIBOS: "recibos", // hoja (dentro de la planilla financiero) donde se registra cada recibo emitido
 
@@ -245,6 +255,23 @@ function recibo_imagenDataUri_(base64, driveId, clave) {
   } catch (err) {
     return ""; // si el ID es inválido o no hay acceso, mostramos el placeholder
   }
+}
+
+/**
+ * Devuelve las firmas configuradas, cada una con su imagen ya resuelta como
+ * data URI (desde base64, driveId en CONFIG, o la Propiedad del Script
+ * FIRMA_<ID>_DRIVE_ID). El front arma el desplegable "Firmar como".
+ *
+ * @return {Array<{id:string, nombre:string, dataUri:string}>}
+ */
+function recibo_obtenerFirmas() {
+  var firmas = CONFIG.FIRMAS || [];
+  return firmas.map(function (f) {
+    var propKey = "FIRMA_" + String(f.id).toUpperCase() + "_DRIVE_ID";
+    var driveId = f.driveId || recibo_prop_(propKey);
+    var uri = recibo_imagenDataUri_(f.base64 || "", driveId, "firma_" + f.id);
+    return { id: f.id, nombre: f.nombre, dataUri: uri };
+  });
 }
 
 /**

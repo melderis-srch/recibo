@@ -137,8 +137,14 @@
 
         <h2>Firma</h2>
         <div class="campo">
-          <label for="inFirmadoPor">Firmado por / Aclaración</label>
-          <input type="text" id="inFirmadoPor" class="dato" placeholder="Nombre y apellido de quien firma">
+          <label for="selFirma">Firmar como</label>
+          <select id="selFirma">
+            <option value="">— Sin firma / manual —</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="inFirmadoPor">Aclaración (nombre de quien firma)</label>
+          <input type="text" id="inFirmadoPor" class="dato" placeholder="Se completa solo al elegir arriba; editable">
         </div>
 
         <!-- Resumen de cálculos en vivo -->
